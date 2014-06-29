@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>HTML 5 Application - IndexedDb</title>
+
+<script type="text/javascript" >
+
+// creo l'oggetto a cui poi assocerÃ² il l'opportuna api disponibile per l'accesso al db
+var localDatabase = {};
+
+var dbName = "cavalli";
+
+// il metodo per identificare le api per l'accesso al db sono ancora dicersi da implementazione ad implementazione
+localDatabase.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+localDatabase.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange;
+localDatabase.IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction;
+
+// imposto la fuzione che verrÃ  richiamata in caso di errore
+localDatabase.indexedDB.onerror = function (e) {
+	console.log("Errore dal database: " + e.target.errorCode);
+};
+
+// fuzione dei apertura del databese
+function openDatabase() {
+	// la chiamata per aprire effettivamente il db
+	var openRequest = localDatabase.indexedDB.open(dbName);
+	// in caso di errore nell'apertura
+	openRequest.onerror = function(e) {
+		console.log("Errore nell'apertura del Database: " + e.target.errorCode);
+	};
+	// in caso di successo nell'apertura
+	openRequest.onsuccess = function(event) {
+		localDatabase.db = openRequest.result;
+	};	
+}
+
+
+// funzione per la creazione del db
+function createDatabase() {
+	console.log('cancello il db se esistente');
+	var deleteDbRequest = localDatabase.indexedDB.deleteDatabase(dbName);
+	// in caso di cussesso
+	deleteDbRequest.onsuccess = function (event) {
+   		console.log('il db Ã¨ stato cancellato');
+   		// riapro il db
+   		var openRequest = localDatabase.indexedDB.open(dbName,1);
+		// nel caso non riesca a riaprire il db
+		openRequest.onerror = function(e) {
+			console.log("Errore nella creazione del Database: " + e.target.errorCode);
+		};
+		// nel caso riesca a riaprire il db
+		openRequest.onsuccess = function(event) {
+			console.log("Database creato");
+			localDatabase.db = openRequest.result;
+		};	
+		
+		// devo gestire l'eventualutÃ  di un aggiornamento
+		openRequest.onupgradeneeded = function (evt) {   
+			console.log("Creo gli oggetti di memorizzazione");
+	    	var archivioCavalli = evt.currentTarget.result.createObjectStore ("cavalli", 
+	    	                                                              {keyPath: "id"});  
+	    	
+	    	// impongo gli indici
+	    	archivioCavalli.createIndex("chiaveID", "id", { unique: true }); 
+			archivioCavalli.createIndex("indiceNomeCavallo", "cavallo", { unique: false });        
+			archivioCavalli.createIndex("indiceNomeUtente", "utente", 
+			                        { unique: true }); // vincolo un solo cavallo per utente
+			
+        };
+        // gestisco il caso in cui non riesca a cancellare il BD
+        deleteDbRequest.onerror = function (e) {
+        	console.log("Errore nella cancellazione del Database: " + e.target.errorCode);
+        };
+    
+	};
+}
+
+// funzione per la popolazione del db
+function populateDatabase() {
+	console.log("popolo il database");
+	var transaction = localDatabase.db.transaction("cavalli", "readwrite");
+	var store = transaction.objectStore("cavalli");                    
+  
+	if (localDatabase != null && localDatabase.db != null) {
+		var request = store.put({
+			"id": "001",
+			"nome" : "furia",
+			"utente" : "francesco",
+			"descrizione" : "buon cavallo"
+		});
+		request.onsuccess = function(e) {
+			console.log("ho aggiunto il cavallo 001 - Furia ");
+		};
+		
+		request.onerror = function(e) {
+			console.log(e.value);
+		};
+		
+		request = store.put({
+			"id": "002",
+			"nome" : "Ciucchino",
+			"utente" : "edoardo",
+			"descrizione" : "bell'asino"
+		});
+		request.onsuccess = function(e) {
+			console.log("ho aggiunto il cavallo 002 - Ciucchino");
+		};
+		
+		request.onerror = function(e) {
+			console.log(e.value);
+		};
+		request = store.put({
+			"id": "003",
+			"nome" : "Lessi",
+			"utente" : "mario",
+			"descrizione" : "un cane"
+		});
+		request.onsuccess = function(e) {
+			console.log("ho aggiunto il cavallo 003 - Lessi");
+		};
+		
+		request.onerror = function(e) {
+			console.log(e.value);
+		};
+		request = store.put({
+			"id": "004",
+			"nome" : "Scrissi",
+			"utente" : "paolo",
+			"descrizione" : "intellettuale"
+		});
+		
+		request.onsuccess = function(e) {
+			console.log("ho aggiunto il cavallo 004 - Scrissi");
+		};
+		
+		request.onerror = function(e) {
+			console.log(e.value);
+		};
+	}
+}
+
+function addCavallo() {
+	try {
+		var result = document.getElementById("result");
+		result.innerHTML = "";
+		
+		var transaction = localDatabase.db.transaction("cavalli", "readwrite");
+		var store = transaction.objectStore("cavalli");                    
+	  
+		if (localDatabase != null && localDatabase.db != null) {
+			var request = store.add({
+				"id": "004",
+				"nome" : "Scrissi",
+				"utente" : "paolo",
+				"descrizione" : "intellettuale"
+			});
+			request.onsuccess = function(e) {
+				result.innerHTML = "il cavallo 004 Ã¨ stato inserito correttamente.";;
+			};
+			
+			request.onerror = function(e) {
+				console.log(e.value);
+				result.innerHTML = "Il cavallo non Ã¨ stato aggiunto.";
+			};
+		}
+	}
+	catch(e){
+		console.log(e);
+	}
+}
+
+/*
+function addCavalloByXHR() {
+
+	
+	
+	try {
+		var result = document.getElementById("result");
+		result.innerHTML = "";
+		
+		var transaction = localDatabase.db.transaction("cavalli", "readwrite");
+		var store = transaction.objectStore("cavalli");                    
+	  
+		if (localDatabase != null && localDatabase.db != null) {
+			var request = store.add({
+				"id": "004",
+				"nome" : "Scrissi",
+				"utente" : "paolo",
+				"descrizione" : "intellettuale"
+			});
+			request.onsuccess = function(e) {
+				result.innerHTML = "il cavallo 004 Ã¨ stato inserito correttamente.";;
+			};
+			
+			request.onerror = function(e) {
+				console.log(e.value);
+				result.innerHTML = "Il cavallo non Ã¨ stato aggiunto.";
+			};
+		}
+	}
+	catch(e){
+		console.log(e);
+	}
+}
+*/
+
+function updateCavallo() {
+	try {
+		var result = document.getElementById("result");
+		result.innerHTML = "";
+		
+		var transaction = localDatabase.db.transaction("cavalli", "readwrite");
+		var store = transaction.objectStore("cavalli");                    
+	  	var jsonStr;
+	  	
+		if (localDatabase != null && localDatabase.db != null) {
+			
+			store.get("004").onsuccess = function(event) {
+				cavallo = event.target.result;
+				// save old value
+				jsonStr = "OLD: " + JSON.stringify(cavallo);
+				result.innerHTML = jsonStr;
+				
+				// update record
+				cavallo.descrizione = "molto bello";
+					
+				var request = store.put(cavallo);
+					
+				request.onsuccess = function(e) {
+				};
+				
+				request.onerror = function(e) {
+					console.log(e.value);
+				};				
+
+				// fetch record again
+				store.get("004").onsuccess = function(event) {
+					cavallo = event.target.result;
+					jsonStr = "<br/>NEW: " + JSON.stringify(cavallo);
+					result.innerHTML = result.innerHTML  + jsonStr;
+				};
+			}; // fetch employee first time
+		}
+	}
+	catch(e){
+		console.log(e);
+	}
+}
+
+function clearAllCavalli() {
+	try {
+		var result = document.getElementById("result");
+		result.innerHTML = "";
+		
+		if (localDatabase != null && localDatabase.db != null) {
+			var store = localDatabase.db.transaction("cavalli", "readwrite").objectStore("cavalli");                    
+		  
+			store.clear().onsuccess = function(event) {
+				result.innerHTML = "L' oggetto 'cavalli' Ã¨ stato correttamente cancellato";
+			};
+		}
+	}
+	catch(e){
+		console.log(e);
+	}
+}
+
+function fetchCavallo(id) {
+	try {
+		var result = document.getElementById("result");
+		result.innerHTML = "";
+		if (localDatabase != null && localDatabase.db != null) {
+			var store = localDatabase.db.transaction("cavalli").objectStore("cavalli");
+			store.get(id).onsuccess = function(event) {
+				var cavalli = event.target.result;
+				if (cavalli == null) {
+					result.innerHTML = "Non Ã¨ stato trovato alcun cavallo";
+				}
+				else {					
+					var jsonStr = JSON.stringify(cavalli);
+					result.innerHTML = jsonStr;
+				}
+			};
+		}
+	}
+	catch(e){
+		console.log(e);
+	}
+}
+
+function fetchAllCavalli() {
+	try {
+		var result = document.getElementById("result");
+		result.innerHTML = "";
+		
+		if (localDatabase != null && localDatabase.db != null) {
+			var store = localDatabase.db.transaction("cavalli").objectStore("cavalli");
+			var request = store.openCursor();
+			request.onsuccess = function(evt) {  
+			    var cursor = evt.target.result;  
+			    if (cursor) {
+			    	var cavalli = cursor.value;
+			    	var jsonStr = JSON.stringify(cavalli);
+			    	result.innerHTML = result.innerHTML + "<br/>" + jsonStr;         
+			        cursor.continue();  
+			    }  
+			};
+		}
+	}
+	catch(e){
+		console.log(e);
+	}
+}
+
+</script>
+</head>
+<body>
+	<button onclick="createDatabase()">Create il Databse</button><br/>
+	<button onclick="openDatabase()">Apri il database</button><br/>
+	<button onclick="populateDatabase()">Popola il deb Database</button><br/>
+	<button onclick="clearAllCavalli()">Rimuovi tutti i cavalli</button><br/>
+	<button onclick="fetchCavallo('004')">Recuepera il cavallo 004 </button><br/>
+	<button onclick="updateCavallo()">Aggiorna il cavallo</button><br/>
+	<button onclick="addCavallo()">Add Aggiungi cavallo</button><br/>
+	
+	<button onclick="fetchAllCavalli()">Recupera tutti i cavalli</button><br/>
+
+	
+	<div id="result" ></div>
+	</body>
+</html>
